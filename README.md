@@ -1,23 +1,54 @@
 # assistant-engine
 
-Personal reminder CLI that creates Windows Task Scheduler tasks to send Microsoft Teams notifications via webhooks. Designed to be used by AI assistants (like [Claude Code](https://docs.anthropic.com/en/docs/claude-code)) as a tool for scheduling reminders on behalf of the user — no manual CLI interaction required.
+Personal reminder CLI that creates Windows Task Scheduler tasks to send Microsoft Teams notifications via webhooks. Use it directly from the terminal or let an AI assistant (like [Claude Code](https://docs.anthropic.com/en/docs/claude-code)) manage reminders for you.
 
 ## How It Works
 
 ```
-User tells AI → AI runs CLI → Task Scheduler registers task → At scheduled time → Teams notification with @mention
+CLI command → Task Scheduler registers task → At scheduled time → Teams notification with @mention
 ```
 
-1. You tell your AI assistant something like *"remind me to review the PR on Monday at 9am"*
-2. The assistant calls `assistant-engine add "Review PR" -d 2026-04-27 -t 09:00`
-3. A Windows Task Scheduler task is created via `powershell.exe`
-4. At the scheduled time, the task fires a PowerShell script that sends an Adaptive Card to a Teams channel with an @mention, so you get a push notification
+1. A reminder is created via the CLI (by you or by an AI assistant)
+2. A Windows Task Scheduler task is registered via `powershell.exe`
+3. At the scheduled time, the task fires a PowerShell script that sends an Adaptive Card to a Teams channel with an @mention, so you get a push notification
+4. The task expires 1 hour after its scheduled time — no cleanup needed
 
 There is no background process running — tasks sleep in Windows Task Scheduler with zero resource usage.
 
-## Using with AI Assistants
+## Usage
 
-This CLI is designed to be called directly by AI assistants that have shell access (e.g., Claude Code, Copilot CLI, Aider). The AI runs the binary like any other CLI tool.
+The CLI can be used in two ways: **directly from the terminal** or **through an AI assistant**.
+
+### Direct usage (terminal)
+
+Run commands directly in your WSL terminal:
+
+```bash
+# Create a reminder for tomorrow at 09:00 (default)
+assistant-engine add "Review catalog PR"
+
+# Create with specific date and time
+assistant-engine add "Deploy to production" -d 2026-04-25 -t 14:00
+
+# Create with a detailed message
+assistant-engine add "Sprint review" -m "Prepare demo for the catalog feature" -d 2026-04-28 -t 10:00
+
+# List all active reminders
+assistant-engine list
+
+# Remove a specific reminder
+assistant-engine remove <id>
+
+# Postpone a reminder to a new date/time
+assistant-engine snooze <id> -d 2026-04-30 -t 09:00
+
+# Remove all reminders
+assistant-engine clear
+```
+
+### Using with AI assistants
+
+This CLI is designed to be called directly by AI assistants that have shell access (e.g., Claude Code, Copilot CLI, Aider). The AI runs the binary like any other CLI tool — you just describe what you need in natural language.
 
 **Example conversation:**
 
@@ -33,9 +64,9 @@ This CLI is designed to be called directly by AI assistants that have shell acce
 >
 > **AI runs:** `assistant-engine list`
 
-The AI handles date parsing, flag mapping, and ID tracking — you just describe what you need in natural language.
+The AI handles date parsing, flag mapping, and ID tracking automatically.
 
-### Setup for Claude Code
+#### Setup for Claude Code
 
 After installing the binary (see below), the CLI is immediately available to Claude Code since it runs in your shell. No additional MCP server or plugin is needed — Claude calls it via Bash like any other command-line tool.
 
@@ -156,46 +187,6 @@ This method uses the classic Office 365 connector. It still works in some tenant
 7. Paste it in your `config.json` with `"webhook_type": "classic"`
 
 > **Note:** If you don't see the Connectors option, your organization may have disabled it. Use Method 1 instead.
-
-## Usage
-
-### Add a reminder
-
-```bash
-# Default: +24h at 09:00
-assistant-engine add "Review catalog PR"
-
-# With specific date and time
-assistant-engine add "Deploy to production" -d 2026-04-25 -t 14:00
-
-# With a detailed message
-assistant-engine add "Sprint review" -m "Prepare demo for the catalog feature" -d 2026-04-28 -t 10:00
-```
-
-### List reminders
-
-```bash
-assistant-engine list
-```
-
-### Remove a reminder
-
-```bash
-assistant-engine remove <id>
-```
-
-### Snooze a reminder
-
-```bash
-# Postpone to a new date/time
-assistant-engine snooze <id> -d 2026-04-30 -t 09:00
-```
-
-### Clear all reminders
-
-```bash
-assistant-engine clear
-```
 
 ## Architecture
 
