@@ -1,6 +1,8 @@
 {
   "webhook_url": "https://your-org.webhook.office.com/webhookb2/...",
   "webhook_type": "workflow",
+  "mention_id": "your.email@company.com",
+  "mention_name": "YourFirstName",
   "default_time": "09:00",
   "default_delay_hours": 24
 }
