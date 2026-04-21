@@ -24,6 +24,8 @@ const (
 type Config struct {
 	WebhookURL    string      `json:"webhook_url"`
 	WebhookType   WebhookType `json:"webhook_type"`
+	MentionID     string      `json:"mention_id"`
+	MentionName   string      `json:"mention_name"`
 	DefaultTime   string      `json:"default_time"`
 	DefaultDelayH int         `json:"default_delay_hours"`
 }

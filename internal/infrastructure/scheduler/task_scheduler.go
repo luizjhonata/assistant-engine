@@ -16,12 +16,16 @@ const taskPrefix = "AssistantEngine_"
 type WindowsTaskScheduler struct {
 	webhookURL  string
 	webhookType config.WebhookType
+	mentionID   string
+	mentionName string
 }
 
 func NewWindowsTaskScheduler(cfg config.Config) *WindowsTaskScheduler {
 	return &WindowsTaskScheduler{
 		webhookURL:  cfg.WebhookURL,
 		webhookType: cfg.WebhookType,
+		mentionID:   cfg.MentionID,
+		mentionName: cfg.MentionName,
 	}
 }
 
@@ -65,9 +69,19 @@ func (s *WindowsTaskScheduler) buildPayload(reminder domain.Reminder) string {
 		)
 	}
 
+	mentionTag := ""
+	mentionEntities := ""
+	if s.mentionID != "" && s.mentionName != "" {
+		mentionTag = fmt.Sprintf(" <at>%s</at>", s.mentionName)
+		mentionEntities = fmt.Sprintf(
+			`,"msteams":{"entities":[{"type":"mention","text":"<at>%s</at>","mentioned":{"id":"%s","name":"%s"}}]}`,
+			s.mentionName, s.mentionID, s.mentionName,
+		)
+	}
+
 	return fmt.Sprintf(
-		`{"type":"message","attachments":[{"contentType":"application/vnd.microsoft.card.adaptive","contentUrl":null,"content":{"$schema":"http://adaptivecards.io/schemas/adaptive-card.json","type":"AdaptiveCard","version":"1.4","body":[{"type":"TextBlock","text":"%s","weight":"Bolder","size":"Medium"},{"type":"TextBlock","text":"%s","wrap":true}]}}]}`,
-		title, message,
+		`{"type":"message","attachments":[{"contentType":"application/vnd.microsoft.card.adaptive","contentUrl":null,"content":{"$schema":"http://adaptivecards.io/schemas/adaptive-card.json","type":"AdaptiveCard","version":"1.4","body":[{"type":"TextBlock","text":"%s","weight":"Bolder","size":"Medium"},{"type":"TextBlock","text":"%s%s","wrap":true}]%s}}]}`,
+		title, message, mentionTag, mentionEntities,
 	)
 }
 
