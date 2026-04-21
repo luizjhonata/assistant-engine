@@ -1,0 +1,5 @@
+{
+  "webhook_url": "https://your-org.webhook.office.com/webhookb2/...",
+  "default_time": "09:00",
+  "default_delay_hours": 24
+}
