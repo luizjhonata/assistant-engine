@@ -86,7 +86,12 @@ cd assistant-engine
 make install
 ```
 
-This builds the binary and copies it to `$GOPATH/bin` (usually `~/go/bin`). Make sure this directory is in your `$PATH`.
+This will:
+1. Build the binary
+2. Run the interactive setup (webhook URL, @mention, defaults) — skipped if config already exists
+3. Copy the binary to `$GOPATH/bin` (usually `~/go/bin`)
+
+Make sure `$GOPATH/bin` is in your `$PATH`.
 
 ### Option 2: Go install
 
