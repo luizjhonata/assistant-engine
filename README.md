@@ -83,14 +83,10 @@ After installing the binary (see below), the CLI is immediately available to Cla
 ```bash
 git clone git@github.com:luizjhonata/assistant-engine.git
 cd assistant-engine
-go build -o assistant-engine ./cmd/assistant-engine/
+make install
 ```
 
-Then move the binary to a directory in your `$PATH`:
-
-```bash
-sudo mv assistant-engine /usr/local/bin/
-```
+This builds the binary and copies it to `$GOPATH/bin` (usually `~/go/bin`). Make sure this directory is in your `$PATH`.
 
 ### Option 2: Go install
 
@@ -98,7 +94,7 @@ sudo mv assistant-engine /usr/local/bin/
 go install github.com/luizjhonata/assistant-engine/cmd/assistant-engine@latest
 ```
 
-This places the binary in `$GOPATH/bin` (usually `~/go/bin`). Make sure this directory is in your `$PATH`.
+This also places the binary in `$GOPATH/bin`.
 
 ### Verify installation
 
