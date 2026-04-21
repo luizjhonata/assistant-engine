@@ -1,25 +1,78 @@
 # assistant-engine
 
-Personal reminder CLI that creates Windows Task Scheduler tasks to send Microsoft Teams notifications via webhooks.
+Personal reminder CLI that creates Windows Task Scheduler tasks to send Microsoft Teams notifications via webhooks. Designed to be used by AI assistants (like [Claude Code](https://docs.anthropic.com/en/docs/claude-code)) as a tool for scheduling reminders on behalf of the user — no manual CLI interaction required.
+
+## How It Works
+
+```
+User tells AI → AI runs CLI → Task Scheduler registers task → At scheduled time → Teams notification with @mention
+```
+
+1. You tell your AI assistant something like *"remind me to review the PR on Monday at 9am"*
+2. The assistant calls `assistant-engine add "Review PR" -d 2026-04-27 -t 09:00`
+3. A Windows Task Scheduler task is created via `powershell.exe`
+4. At the scheduled time, the task fires a PowerShell script that sends an Adaptive Card to a Teams channel with an @mention, so you get a push notification
+
+There is no background process running — tasks sleep in Windows Task Scheduler with zero resource usage.
+
+## Using with AI Assistants
+
+This CLI is designed to be called directly by AI assistants that have shell access (e.g., Claude Code, Copilot CLI, Aider). The AI runs the binary like any other CLI tool.
+
+**Example conversation:**
+
+> **You:** remind me Thursday at 10am to prepare the sprint demo
+>
+> **AI runs:** `assistant-engine add "Prepare sprint demo" -d 2026-04-30 -t 10:00`
+>
+> **You:** actually, push that to Friday
+>
+> **AI runs:** `assistant-engine snooze <id> -d 2026-05-01 -t 10:00`
+>
+> **You:** what reminders do I have?
+>
+> **AI runs:** `assistant-engine list`
+
+The AI handles date parsing, flag mapping, and ID tracking — you just describe what you need in natural language.
+
+### Setup for Claude Code
+
+After installing the binary (see below), the CLI is immediately available to Claude Code since it runs in your shell. No additional MCP server or plugin is needed — Claude calls it via Bash like any other command-line tool.
 
 ## Prerequisites
 
-- Go 1.21+
-- WSL2 with access to `powershell.exe`
-- Microsoft Teams with permission to create channels and workflows
+- **Go 1.21+** — to build from source (not needed if using a pre-built binary)
+- **WSL2** — the CLI runs on Linux and calls `powershell.exe` to register Windows tasks
+- **Microsoft Teams** — with permission to create channels and workflows in your organization
 
 ## Installation
 
-```bash
-go install github.com/luizjhonata/assistant-engine/cmd/assistant-engine@latest
-```
-
-Or build from source:
+### Option 1: Build from source
 
 ```bash
 git clone git@github.com:luizjhonata/assistant-engine.git
 cd assistant-engine
 go build -o assistant-engine ./cmd/assistant-engine/
+```
+
+Then move the binary to a directory in your `$PATH`:
+
+```bash
+sudo mv assistant-engine /usr/local/bin/
+```
+
+### Option 2: Go install
+
+```bash
+go install github.com/luizjhonata/assistant-engine/cmd/assistant-engine@latest
+```
+
+This places the binary in `$GOPATH/bin` (usually `~/go/bin`). Make sure this directory is in your `$PATH`.
+
+### Verify installation
+
+```bash
+assistant-engine --help
 ```
 
 ## Configuration
@@ -143,13 +196,6 @@ assistant-engine snooze <id> -d 2026-04-30 -t 09:00
 ```bash
 assistant-engine clear
 ```
-
-## How It Works
-
-1. The CLI creates a reminder and stores it in `~/.assistant-engine/reminders.json`
-2. A Windows Task Scheduler task is registered via `powershell.exe` from WSL
-3. At the scheduled time, the task runs a PowerShell script that sends an HTTP POST to the Teams webhook
-4. The task expires 1 hour after its scheduled time (one-time trigger with `EndBoundary`)
 
 ## Architecture
 
