@@ -1,9 +1,11 @@
 package scheduler
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os/exec"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/luizjhonata/assistant-engine/internal/domain"
 	"github.com/luizjhonata/assistant-engine/internal/infrastructure/config"
@@ -27,29 +29,30 @@ func (s *WindowsTaskScheduler) Schedule(reminder domain.Reminder) error {
 	taskName := taskPrefix + reminder.ID
 	payload := s.buildPayload(reminder)
 
-	psAction := fmt.Sprintf(
-		`Invoke-RestMethod -Uri '%s' -Method Post -ContentType 'application/json' -Body '%s'`,
+	innerScript := fmt.Sprintf(
+		"Invoke-RestMethod -Uri '%s' -Method Post -ContentType 'application/json' -Body '%s'",
 		s.webhookURL, payload,
 	)
+	encodedCmd := encodeForPowerShell(innerScript)
 
 	scheduleTime := reminder.ScheduledAt.Format("15:04")
 	scheduleDate := reminder.ScheduledAt.Format("01/02/2006")
 
 	createCmd := fmt.Sprintf(
-		`$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -WindowStyle Hidden -Command "%s"'; `+
+		`$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -WindowStyle Hidden -EncodedCommand %s'; `+
 			`$trigger = New-ScheduledTaskTrigger -Once -At '%s %s'; `+
-			`$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -DeleteExpiredTaskAfterCompletion (New-TimeSpan -Hours 1); `+
 			`$trigger.EndBoundary = (Get-Date '%s %s').AddHours(1).ToString('yyyy-MM-ddTHH:mm:ss'); `+
+			`$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries; `+
 			`Register-ScheduledTask -TaskName '%s' -Action $action -Trigger $trigger -Settings $settings -Force`,
-		psAction, scheduleDate, scheduleTime, scheduleDate, scheduleTime, taskName,
+		encodedCmd, scheduleDate, scheduleTime, scheduleDate, scheduleTime, taskName,
 	)
 
 	return runPowerShell(createCmd)
 }
 
 func (s *WindowsTaskScheduler) buildPayload(reminder domain.Reminder) string {
-	title := escapeForJSON(reminder.Title)
-	message := escapeForJSON(reminder.Message)
+	title := escapeForPowerShellString(reminder.Title)
+	message := escapeForPowerShellString(reminder.Message)
 
 	if message == "" {
 		message = title
@@ -57,13 +60,13 @@ func (s *WindowsTaskScheduler) buildPayload(reminder domain.Reminder) string {
 
 	if s.webhookType == config.WebhookClassic {
 		return fmt.Sprintf(
-			`{\"title\":\"%s\",\"text\":\"%s\"}`,
+			`{"title":"%s","text":"%s"}`,
 			title, message,
 		)
 	}
 
 	return fmt.Sprintf(
-		`{\"type\":\"message\",\"attachments\":[{\"contentType\":\"application/vnd.microsoft.card.adaptive\",\"contentUrl\":null,\"content\":{\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"type\":\"AdaptiveCard\",\"version\":\"1.4\",\"body\":[{\"type\":\"TextBlock\",\"text\":\"%s\",\"weight\":\"Bolder\",\"size\":\"Medium\"},{\"type\":\"TextBlock\",\"text\":\"%s\",\"wrap\":true}]}}]}`,
+		`{"type":"message","attachments":[{"contentType":"application/vnd.microsoft.card.adaptive","contentUrl":null,"content":{"$schema":"http://adaptivecards.io/schemas/adaptive-card.json","type":"AdaptiveCard","version":"1.4","body":[{"type":"TextBlock","text":"%s","weight":"Bolder","size":"Medium"},{"type":"TextBlock","text":"%s","wrap":true}]}}]}`,
 		title, message,
 	)
 }
@@ -88,6 +91,16 @@ func (s *WindowsTaskScheduler) UnscheduleAll() error {
 	return runPowerShell(cmd)
 }
 
+func encodeForPowerShell(script string) string {
+	runes := utf16.Encode([]rune(script))
+	bytes := make([]byte, len(runes)*2)
+	for i, r := range runes {
+		bytes[i*2] = byte(r)
+		bytes[i*2+1] = byte(r >> 8)
+	}
+	return base64.StdEncoding.EncodeToString(bytes)
+}
+
 func runPowerShell(command string) error {
 	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command)
 	output, err := cmd.CombinedOutput()
@@ -97,8 +110,8 @@ func runPowerShell(command string) error {
 	return nil
 }
 
-func escapeForJSON(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
+func escapeForPowerShellString(s string) string {
+	s = strings.ReplaceAll(s, `'`, `''`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
 	s = strings.ReplaceAll(s, "\n", `\n`)
 	return s
