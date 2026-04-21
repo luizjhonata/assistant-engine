@@ -36,10 +36,54 @@ Create `~/.assistant-engine/config.json`:
 
 ### Setting up a Teams Webhook
 
-1. In Microsoft Teams, go to the channel where you want notifications
-2. Click the **...** menu → **Connectors** (or **Workflows**)
-3. Search for **Incoming Webhook** and configure it
-4. Copy the webhook URL and paste it in `config.json`
+There are two methods to create a webhook in Microsoft Teams. **Workflows** is the recommended approach by Microsoft — the classic Incoming Webhook connector is being deprecated.
+
+#### Method 1: Workflows (recommended)
+
+This method uses Power Automate to create a webhook endpoint that posts Adaptive Cards to a channel.
+
+1. Open **Microsoft Teams** and go to the channel where you want notifications
+2. Click the **+** (add a tab) or go to **...** → **Workflows**
+3. Search for the template **"Post to a channel when a webhook request is received"**
+4. Select it and follow the setup wizard:
+   - Name the workflow (e.g., "Assistant Engine Notifications")
+   - Confirm the Team and Channel where messages will be posted
+   - Click **Add workflow**
+5. After creation, Teams shows the **webhook URL** — copy it
+6. The URL looks like: `https://*.logic.azure.com:443/workflows/...`
+7. Paste it in your `config.json` and set `webhook_type` to `"workflow"`:
+
+```json
+{
+  "webhook_url": "https://prod-XX.westus.logic.azure.com:443/workflows/...",
+  "webhook_type": "workflow",
+  "default_time": "09:00",
+  "default_delay_hours": 24
+}
+```
+
+#### Method 2: Incoming Webhook (legacy)
+
+This method uses the classic Office 365 connector. It still works in some tenants but Microsoft is phasing it out.
+
+1. Open **Microsoft Teams** and go to the channel where you want notifications
+2. Click the **...** menu next to the channel name → **Connectors** (or **Manage channel** → **Connectors**)
+3. Search for **"Incoming Webhook"** and click **Configure**
+4. Give it a name (e.g., "Assistant Engine") and optionally upload an icon
+5. Click **Create** — Teams generates a webhook URL
+6. The URL looks like: `https://your-org.webhook.office.com/webhookb2/...`
+7. Paste it in your `config.json` and set `webhook_type` to `"classic"`:
+
+```json
+{
+  "webhook_url": "https://your-org.webhook.office.com/webhookb2/...",
+  "webhook_type": "classic",
+  "default_time": "09:00",
+  "default_delay_hours": 24
+}
+```
+
+> **Note:** If you don't see the Connectors option, your organization may have disabled it. Use Method 1 instead.
 
 ## Usage
 

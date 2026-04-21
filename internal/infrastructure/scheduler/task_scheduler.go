@@ -12,23 +12,20 @@ import (
 const taskPrefix = "AssistantEngine_"
 
 type WindowsTaskScheduler struct {
-	webhookURL string
+	webhookURL  string
+	webhookType config.WebhookType
 }
 
 func NewWindowsTaskScheduler(cfg config.Config) *WindowsTaskScheduler {
-	return &WindowsTaskScheduler{webhookURL: cfg.WebhookURL}
+	return &WindowsTaskScheduler{
+		webhookURL:  cfg.WebhookURL,
+		webhookType: cfg.WebhookType,
+	}
 }
 
 func (s *WindowsTaskScheduler) Schedule(reminder domain.Reminder) error {
 	taskName := taskPrefix + reminder.ID
-
-	title := escapeForJSON(reminder.Title)
-	message := escapeForJSON(reminder.Message)
-
-	payload := fmt.Sprintf(
-		`{\"title\":\"%s\",\"text\":\"%s\"}`,
-		title, message,
-	)
+	payload := s.buildPayload(reminder)
 
 	psAction := fmt.Sprintf(
 		`Invoke-RestMethod -Uri '%s' -Method Post -ContentType 'application/json' -Body '%s'`,
@@ -48,6 +45,27 @@ func (s *WindowsTaskScheduler) Schedule(reminder domain.Reminder) error {
 	)
 
 	return runPowerShell(createCmd)
+}
+
+func (s *WindowsTaskScheduler) buildPayload(reminder domain.Reminder) string {
+	title := escapeForJSON(reminder.Title)
+	message := escapeForJSON(reminder.Message)
+
+	if message == "" {
+		message = title
+	}
+
+	if s.webhookType == config.WebhookClassic {
+		return fmt.Sprintf(
+			`{\"title\":\"%s\",\"text\":\"%s\"}`,
+			title, message,
+		)
+	}
+
+	return fmt.Sprintf(
+		`{\"type\":\"message\",\"attachments\":[{\"contentType\":\"application/vnd.microsoft.card.adaptive\",\"contentUrl\":null,\"content\":{\"$schema\":\"http://adaptivecards.io/schemas/adaptive-card.json\",\"type\":\"AdaptiveCard\",\"version\":\"1.4\",\"body\":[{\"type\":\"TextBlock\",\"text\":\"%s\",\"weight\":\"Bolder\",\"size\":\"Medium\"},{\"type\":\"TextBlock\",\"text\":\"%s\",\"wrap\":true}]}}]}`,
+		title, message,
+	)
 }
 
 func (s *WindowsTaskScheduler) Unschedule(reminderID string) error {

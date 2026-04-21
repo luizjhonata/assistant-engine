@@ -14,10 +14,18 @@ const (
 	DefaultDelayH   = 24
 )
 
+type WebhookType string
+
+const (
+	WebhookWorkflow WebhookType = "workflow"
+	WebhookClassic  WebhookType = "classic"
+)
+
 type Config struct {
-	WebhookURL    string `json:"webhook_url"`
-	DefaultTime   string `json:"default_time"`
-	DefaultDelayH int    `json:"default_delay_hours"`
+	WebhookURL    string      `json:"webhook_url"`
+	WebhookType   WebhookType `json:"webhook_type"`
+	DefaultTime   string      `json:"default_time"`
+	DefaultDelayH int         `json:"default_delay_hours"`
 }
 
 func Load() (Config, error) {
@@ -41,6 +49,9 @@ func Load() (Config, error) {
 	}
 	if cfg.DefaultDelayH == 0 {
 		cfg.DefaultDelayH = DefaultDelayH
+	}
+	if cfg.WebhookType == "" {
+		cfg.WebhookType = WebhookWorkflow
 	}
 
 	return cfg, nil
