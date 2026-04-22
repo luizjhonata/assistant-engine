@@ -34,8 +34,8 @@ func (s *WindowsTaskScheduler) Schedule(reminder domain.Reminder) error {
 	payload := s.buildPayload(reminder)
 
 	innerScript := fmt.Sprintf(
-		"Invoke-RestMethod -Uri '%s' -Method Post -ContentType 'application/json' -Body '%s'",
-		s.webhookURL, payload,
+		"$body = [System.Text.Encoding]::UTF8.GetBytes('%s'); Invoke-RestMethod -Uri '%s' -Method Post -ContentType 'application/json; charset=utf-8' -Body $body",
+		payload, s.webhookURL,
 	)
 	encodedCmd := encodeForPowerShell(innerScript)
 
